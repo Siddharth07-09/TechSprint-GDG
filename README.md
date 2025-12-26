@@ -1,4 +1,4 @@
-# 🌤️ AQI Analyst – Air Quality Intelligence Platform (MVP)
+# 🌤️ AQI Analyst – Air Quality Intelligence Platform 
 
 ## 📌 Overview
 **AQI Analyst** is an air-quality intelligence project aimed at helping students, researchers, and local communities understand air pollution patterns through **data-driven analysis and explainable AI**.
