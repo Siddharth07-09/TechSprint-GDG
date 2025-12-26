@@ -1,45 +1,31 @@
 import pandas as pd
 import google.genai as genai
+import requests
+import os
+
+# ==================================================
+# CSV DATA HANDLING (UNCHANGED CORE MVP)
+# ==================================================
 
 def load_data(file):
     """
     Reads a CSV file into a Pandas DataFrame and validates the structure.
-    
-    Args:
-        file: The file object uploaded by the user.
-        
-    Returns:
-        pd.DataFrame: A cleaned dataframe.
-        
-    Raises:
-        ValueError: If columns are missing or data formats are invalid.
     """
     try:
-        # Read the CSV file
         df = pd.read_csv(file)
-
-        # Standardize column names (remove extra spaces)
         df.columns = df.columns.str.strip()
 
-        # Check for required columns
-        required_columns = {'Date', 'City', 'AQI'}
+        required_columns = {"Date", "City", "AQI"}
         if not required_columns.issubset(df.columns):
             missing = required_columns - set(df.columns)
-            raise ValueError(f"Missing required columns: {', '.join(missing)}. Please ensure CSV has 'Date', 'City', and 'AQI'.")
+            raise ValueError(
+                f"Missing required columns: {', '.join(missing)}"
+            )
 
-        # Convert Date column to datetime objects
-        df['Date'] = pd.to_datetime(df['Date'], errors='coerce')
-        
-        # Check if Date conversion failed for any row
-        if df['Date'].isna().any():
-            df = df.dropna(subset=['Date'])
+        df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
+        df["AQI"] = pd.to_numeric(df["AQI"], errors="coerce")
 
-            raise ValueError("Date column could not be parsed. Please check the date format.")
-
-        # Ensure AQI is numeric, coerce errors to NaN and drop them
-        df['AQI'] = pd.to_numeric(df['AQI'], errors='coerce')
-        df = df.dropna(subset=['Date', 'AQI'])
-
+        df = df.dropna(subset=["Date", "AQI"])
         return df
 
     except Exception as e:
@@ -48,64 +34,49 @@ def load_data(file):
 
 def summarize_data(df):
     """
-    Generates a statistical summary of the dataset for the LLM to analyze.
-    This reduces token usage by sending stats instead of raw rows.
-    
-    Args:
-        df (pd.DataFrame): The cleaned dataframe.
-        
-    Returns:
-        str: A text summary of the data trends.
+    Generates a compact statistical summary for Gemini analysis.
     """
-    # 1. Basic Metadata
-    start_date = df['Date'].min().strftime('%Y-%m-%d')
-    end_date = df['Date'].max().strftime('%Y-%m-%d')
-    cities = df['City'].unique().tolist()
-    
-    summary_lines = [
+    start_date = df["Date"].min().strftime("%Y-%m-%d")
+    end_date = df["Date"].max().strftime("%Y-%m-%d")
+    cities = df["City"].unique().tolist()
+
+    summary = [
         "### DATASET SUMMARY",
         f"Date Range: {start_date} to {end_date}",
         f"Cities Included: {', '.join(cities)}",
-        "\n### CITY-WISE STATISTICS"
+        "\n### CITY-WISE STATISTICS",
     ]
 
-    # 2. Iterate through each city to calculate stats
     for city in cities:
-        city_df = df[df['City'] == city]
-        
-        # General stats
-        min_aqi = city_df['AQI'].min()
-        max_aqi = city_df['AQI'].max()
-        avg_aqi = city_df['AQI'].mean()
-        
-        summary_lines.append(f"\nCity: {city}")
-        summary_lines.append(f"- Overall Min AQI: {min_aqi:.2f}")
-        summary_lines.append(f"- Overall Max AQI: {max_aqi:.2f}")
-        summary_lines.append(f"- Overall Avg AQI: {avg_aqi:.2f}")
-        
-        # Monthly Trends (Resample by Month)
-        # We group by month to see the seasonal trend
-        monthly_trend = city_df.set_index('Date').resample('ME')['AQI'].mean()
-        
-        summary_lines.append("- Monthly Averages:")
-        for date, value in monthly_trend.items():
-            if pd.notna(value):
-                summary_lines.append(f"  {date.strftime('%Y-%m')}: {value:.1f}")
+        city_df = df[df["City"] == city]
 
-    # Join all lines into a single string
-    return "\n".join(summary_lines)
+        summary.extend([
+            f"\nCity: {city}",
+            f"- Min AQI: {city_df['AQI'].min():.2f}",
+            f"- Max AQI: {city_df['AQI'].max():.2f}",
+            f"- Avg AQI: {city_df['AQI'].mean():.2f}",
+            "- Monthly Averages:"
+        ])
+
+        monthly = city_df.set_index("Date").resample("ME")["AQI"].mean()
+        for d, v in monthly.items():
+            if pd.notna(v):
+                summary.append(f"  {d.strftime('%Y-%m')}: {v:.1f}")
+
+    return "\n".join(summary)
 
 
-
+# ==================================================
+# GEMINI RESPONSE HANDLER (UPDATED SDK)
+# ==================================================
 
 def get_gemini_response(prompt, api_key):
     """
-    Sends a prompt to Google Gemini and returns the response.
-    Uses the official google-genai SDK (stable usage).
+    Sends a prompt to Google Gemini and returns text response.
     """
     try:
         if not api_key:
-            return "Error: API Key is missing."
+            return "Error: Gemini API key missing."
 
         client = genai.Client(api_key=api_key)
 
@@ -114,10 +85,79 @@ def get_gemini_response(prompt, api_key):
             contents=prompt
         )
 
-        if response and hasattr(response, "text") and response.text:
-            return response.text
-        else:
-            return "Error: Received empty response from Gemini."
+        return response.text if response and response.text else "No response."
 
     except Exception as e:
         return f"Error connecting to Gemini: {str(e)}"
+
+
+# ==================================================
+# OPENWEATHERMAP – LIVE AIR QUALITY
+# ==================================================
+
+def get_city_coordinates(city_name):
+    """
+    Converts city name to latitude & longitude using OpenWeather Geocoding API.
+    """
+    api_key = os.getenv("OPENWEATHER_API_KEY")
+    if not api_key:
+        return {"error": "OpenWeather API key not found."}
+
+    url = (
+        "https://api.openweathermap.org/geo/1.0/direct"
+        f"?q={city_name}&limit=1&appid={api_key}"
+    )
+
+    try:
+        response = requests.get(url, timeout=10)
+        response.raise_for_status()
+        data = response.json()
+
+        if not data:
+            return {"error": "City not found."}
+
+        return {
+            "name": f"{data[0]['name']}, {data[0].get('country', '')}",
+            "lat": data[0]["lat"],
+            "lon": data[0]["lon"]
+        }
+
+    except requests.exceptions.RequestException:
+        return {"error": "Failed to fetch city coordinates."}
+
+
+def fetch_air_pollution(lat, lon):
+    """
+    Fetches current and short-term air pollution data from OpenWeatherMap.
+    """
+    api_key = os.getenv("OPENWEATHER_API_KEY")
+    if not api_key:
+        return {"error": "OpenWeather API key not found."}
+
+    current_url = (
+        "http://api.openweathermap.org/data/2.5/air_pollution"
+        f"?lat={lat}&lon={lon}&appid={api_key}"
+    )
+
+    forecast_url = (
+        "http://api.openweathermap.org/data/2.5/air_pollution/forecast"
+        f"?lat={lat}&lon={lon}&appid={api_key}"
+    )
+
+    try:
+        current_resp = requests.get(current_url, timeout=10)
+        forecast_resp = requests.get(forecast_url, timeout=10)
+
+        current_resp.raise_for_status()
+        forecast_resp.raise_for_status()
+
+        current_data = current_resp.json()["list"][0]
+        forecast_data = forecast_resp.json()["list"][:3]
+
+        return {
+            "current": current_data,
+            "forecast": forecast_data
+        }
+
+    except requests.exceptions.RequestException:
+        return {"error": "Failed to fetch air pollution data."}
