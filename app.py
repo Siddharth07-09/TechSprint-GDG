@@ -1,227 +1,201 @@
 import streamlit as st
-import pandas as pd
-import os
-from dotenv import load_dotenv
 import utils
+from dotenv import load_dotenv
 
-# --------------------------------------------------
-# Load environment variables (.env for local testing)
-# --------------------------------------------------
+# Load environment variables
 load_dotenv()
 
 # --------------------------------------------------
 # Page Configuration
 # --------------------------------------------------
 st.set_page_config(
-    page_title="AQI Analyst MVP",
+    page_title="Spatio-Temporal AQI Analysis & Forecasting",
     page_icon="🌤️",
     layout="wide"
 )
 
-st.title("🌤️ Spatio-Temporal AQI Analysis & Forecasting (MVP)")
-#st.write(
-  #  "Upload a CSV file to analyze air quality trends using **Google Gemini**. "
- #   "This is a research-oriented MVP focusing on AI-based reasoning."
-#)
-
-# --------------------------------------------------
-# Sidebar: Configuration
-# --------------------------------------------------
-st.sidebar.header("Configuration")
-
-api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
-if not api_key:
-    api_key = st.sidebar.text_input("Enter Gemini API Key", type="password")
-
-uploaded_file = st.sidebar.file_uploader(
-    "Upload AQI Dataset (CSV)",
-    type=["csv"]
+st.title("🌤️ Spatio-Temporal AQI Analysis & Forecasting")
+st.write(
+    "Historical AQI analysis and live air quality insights using AI-based reasoning."
 )
 
-# --------------------------------------------------
-# Tabs
-# --------------------------------------------------
-tab1, tab2 = st.tabs(["📊 AQI Analysis (MVP)", "🌍 Live AQI Lookup"])
+tab1, tab2 = st.tabs(["📊 AQI Analysis", "🌍 Live AQI"])
 
 # ==================================================
-# TAB 1: AQI ANALYSIS MVP (UNCHANGED)
+# TAB 1: AQI ANALYSIS
 # ==================================================
 with tab1:
-    if uploaded_file is not None:
-        try:
-            df = utils.load_data(uploaded_file)
-            df = df.sort_values("Date")
+    file = st.file_uploader("Upload AQI CSV", type=["csv"])
 
-            st.subheader("1️⃣ Data Preview")
-            st.dataframe(df.head())
+    if file:
+        df = utils.load_data(file)
 
-            c1, c2, c3 = st.columns(3)
-            c1.metric("Cities", df["City"].nunique())
-            c2.metric("Records", len(df))
-            c3.metric(
-                "Date Range",
-                f"{df['Date'].min().date()} → {df['Date'].max().date()}"
-            )
+        # ---------- Data Preview ----------
+        st.subheader("Data Preview")
+        st.dataframe(df.head())
 
-            st.subheader("2️⃣ AQI Trends Visualization")
-            chart_data = df.pivot_table(
-                index="Date",
-                columns="City",
-                values="AQI",
-                aggfunc="mean"
-            )
-            st.line_chart(chart_data)
+        # ---------- AQI Trend Graph ----------
+        st.subheader("AQI Trend Over Time")
 
-            st.subheader("3️⃣ AI-Powered Insights")
+        trend_df = (
+            df.groupby("Date", as_index=False)["AQI"]
+            .mean()
+            .sort_values("Date")
+        )
 
-            if not api_key:
-                st.warning("⚠️ Enter Gemini API Key in the sidebar.")
-            else:
-                if "data_summary" not in st.session_state:
-                    st.session_state.data_summary = utils.summarize_data(df)
+        st.line_chart(trend_df.set_index("Date")["AQI"])
 
-                summary = st.session_state.data_summary
-                col1, col2, col3 = st.columns(3)
+        # ---------- AI Summary ----------
+        summary = utils.summarize_data(df)
 
-                with col1:
-                    if st.button("📈 Analyze Trends"):
-                        prompt = (
-                            "You are an environmental data analyst.\n\n"
-                            "Analyze the AQI data summary below and identify:\n"
-                            "- Overall trend\n"
-                            "- Seasonal patterns\n"
-                            "- Major pollution spikes\n\n"
-                            "Do not provide numeric predictions.\n\n"
-                            f"{summary}"
+        st.subheader("AI-Powered Insights")
+
+        # SINGLE OUTPUT CONTAINER (already correct)
+        output_container = st.container()
+
+        c1, c2, c3, c4 = st.columns(4)
+
+        # ---------- Trend Analysis ----------
+        with c1:
+            if st.button("📈 Trend Analysis"):
+                with output_container:
+                    st.subheader("📈 Trend Analysis Result")
+                    with st.spinner("🤖 Analyzing AQI trends..."):
+                        st.write(
+                            utils.get_gemini_response(
+                                f"""
+You are an environmental data analyst.
+
+Analyze the AQI dataset summary below and identify:
+- Long-term AQI trends
+- Seasonal or recurring pollution patterns
+- Significant pollution spikes or anomalies
+
+Present the findings as concise bullet points.
+Avoid numeric predictions.
+
+Dataset summary:
+{summary}
+"""
+                            )
                         )
-                        st.session_state.trend = utils.get_gemini_response(prompt, api_key)
 
-                if "trend" in st.session_state:
-                    st.markdown("### 📈 Trend Analysis")
-                    st.write(st.session_state.trend)
+        # ---------- City Comparison ----------
+        with c2:
+            if st.button("🏙️ City Comparison"):
+                with output_container:
+                    st.subheader("🏙️ City Comparison Result")
+                    with st.spinner("🤖 Comparing air quality across cities..."):
+                        st.write(
+                            utils.get_gemini_response(
+                                f"""
+You are conducting a comparative air quality assessment.
 
-                with col2:
-                    if st.button("🏙️ Compare Cities"):
-                        prompt = (
-                            "Compare AQI across cities in the summary below.\n"
-                            "Identify cleaner cities and those with high variability.\n\n"
-                            f"{summary}"
+Based on the AQI summary below:
+- Compare average air quality across cities
+- Identify cities with consistently poor air quality
+- Highlight relatively cleaner cities
+
+Present findings as bullet points.
+
+Dataset summary:
+{summary}
+"""
+                            )
                         )
-                        st.session_state.compare = utils.get_gemini_response(prompt, api_key)
 
-                if "compare" in st.session_state:
-                    st.markdown("### 🏙️ City Comparison")
-                    st.write(st.session_state.compare)
+        # ---------- Health Impact ----------
+        with c3:
+            if st.button("🩺 Health Impact"):
+                with output_container:
+                    st.subheader("🩺 Health Impact Assessment")
+                    with st.spinner("🤖 Assessing health implications..."):
+                        st.write(
+                            utils.get_gemini_response(
+                                f"""
+You are a public health and environmental risk analyst.
 
-                with col3:
-                    if st.button("🔮 Forecast AQI"):
-                        prompt = (
-                            "Based on the AQI trends below, predict the qualitative "
-                            "outlook for the next month.\n"
-                            "Choose exactly one: IMPROVE, WORSEN, STABLE.\n"
-                            "Do not include numeric values.\n\n"
-                            f"{summary}"
+Using the AQI summary below:
+- Describe potential health implications
+- Identify high-risk population groups
+- Suggest general precautionary measures
+
+Present findings as bullet points.
+
+Dataset summary:
+{summary}
+"""
+                            )
                         )
-                        st.session_state.forecast = utils.get_gemini_response(prompt, api_key)
 
-                if "forecast" in st.session_state:
-                    st.markdown("### 🔮 AQI Outlook")
-                    st.write(st.session_state.forecast)
+        # ---------- Forecast ----------
+        with c4:
+            if st.button("🔮 Forecast"):
+                with output_container:
+                    st.subheader("🔮 AQI Forecast Outlook")
+                    with st.spinner("🤖 Generating AQI outlook..."):
+                        st.write(
+                            utils.get_gemini_response(
+                                f"""
+You are an air quality forecasting analyst.
 
-        except Exception as e:
-            st.error(str(e))
-    else:
-        st.info("⬅️ Upload a CSV file to begin.")
+Based on historical AQI patterns below, provide a qualitative outlook
+for the near future.
+
+Choose exactly ONE:
+- IMPROVE
+- WORSEN
+- STABLE
+
+Justify your choice in 2–3 bullet points.
+Do NOT include numeric values.
+
+Dataset summary:
+{summary}
+"""
+                            )
+                        )
 
 # ==================================================
-# TAB 2: LIVE AQI LOOKUP (OPENWEATHERMAP)
+# TAB 2: LIVE AQI (UNCHANGED)
 # ==================================================
 with tab2:
-    st.subheader("🌍 Live AQI Lookup (Global – OpenWeather)")
-    st.write(
-        "Fetch **current air pollution levels** and **short-term trends** "
-        "for any city worldwide using OpenWeatherMap."
-    )
+    st.subheader("Live Air Quality Lookup")
 
-    city_name = st.text_input("Enter city name (e.g., Vijayawada, Delhi, London)")
+    city = st.text_input("Enter city name")
 
     if st.button("Fetch Live AQI"):
-        if not city_name:
-            st.warning("Please enter a city name.")
+        data = utils.fetch_live_aqi(city)
+
+        if "error" in data:
+            st.error(data["error"])
         else:
-            with st.spinner("Resolving city location..."):
-                location = utils.get_city_coordinates(city_name)
+            st.metric("AQI", data["aqi"])
+            st.write(f"**Category:** {data['category']}")
 
-            if "error" in location:
-                st.error(location["error"])
-            else:
-                with st.spinner("Fetching air quality data..."):
-                    pollution = utils.fetch_air_pollution(
-                        location["lat"], location["lon"]
+            st.subheader("Pollutant Components (µg/m³)")
+            utils.display_components(data["components"])
+
+            st.subheader("Next 2 Days AQI Outlook")
+            st.markdown(
+                data["forecast_text"].replace("\n", "  \n")
+            )
+
+            st.subheader("AI Explanation")
+            with st.spinner("🤖 Generating explanation..."):
+                st.write(
+                    utils.get_gemini_response(
+                        "Explain the current AQI condition, "
+                        "short-term trend, health implications, "
+                        "and general precautions.\n\n"
+                        f"{data}"
                     )
+                )
 
-                if "error" in pollution:
-                    st.error(pollution["error"])
-                else:
-                    current = pollution["current"]
-                    components = current["components"]
-
-                    st.metric(
-                        "Air Quality Index (OpenWeather Scale)",
-                        current["main"]["aqi"]
-                    )
-                    aqi_label_map = {
-                        1: "Good",
-                        2: "Fair",
-                        3: "Moderate",
-                        4: "Poor",
-                        5: "Very Poor"
-                    }
-
-                    st.write(f"**Air Quality Category:** {aqi_label_map.get(current['main']['aqi'], 'Unknown')}")
-
-
-                    st.subheader("Pollutant Components (μg/m³)")
-                    st.json(components)
-
-                    st.subheader("Short-Term AQI Trend (Latest Available Data)")
-                    st.caption(
-                        "ℹ️ Trend is based on OpenWeather forecast data and "
-                        "represents general air quality movement, not exact predictions."
-                    )
-                    st.json(pollution["forecast"])
-
-                    if api_key:
-                        with st.spinner("Generating AI explanation..."):
-                            prompt = f"""
-You are an environmental analyst.
-
-The following data represents current air pollution conditions and
-a short-term forecast from a global monitoring service.
-
-Current air pollution data:
-{current}
-
-Short-term forecast data:
-{pollution['forecast']}
-
-Your task:
-- Explain the current air quality condition
-- Indicate whether the trend appears to improve or worsen
-- Describe possible health implications
-- Provide general precautions
-
-Rules:
-- Do NOT mention specific calendar dates
-- Do NOT invent numeric AQI values
-- Use qualitative language only
-- Keep the explanation cautious and concise
-"""
-                            explanation = utils.get_gemini_response(prompt, api_key)
-
-                        st.subheader("AI Explanation")
-                        st.write(explanation)
-                    else:
-                        st.info("Add Gemini API key to get AI explanation.")
-
+# --------------------------------------------------
+# Footer
+# --------------------------------------------------
+st.caption(
+    "AI-generated insights are interpretive and for academic purposes only."
+)
 
