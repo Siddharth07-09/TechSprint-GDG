@@ -19,10 +19,10 @@ st.set_page_config(
 )
 
 st.title("🌤️ Spatio-Temporal AQI Analysis & Forecasting (MVP)")
-st.write(
-    "Upload a CSV file to analyze air quality trends using **Google Gemini**. "
-    "This is a research-oriented MVP focusing on AI-based reasoning."
-)
+#st.write(
+  #  "Upload a CSV file to analyze air quality trends using **Google Gemini**. "
+ #   "This is a research-oriented MVP focusing on AI-based reasoning."
+#)
 
 # --------------------------------------------------
 # Sidebar: Configuration
@@ -223,4 +223,5 @@ Rules:
                         st.write(explanation)
                     else:
                         st.info("Add Gemini API key to get AI explanation.")
+
 
