@@ -1,95 +1,82 @@
-# 🌤️ AQI Analyst – Air Quality Intelligence Platform 
+# 🌤️ Spatio-Temporal AQI Analysis & Forecasting
 
-## 📌 Overview
-**AQI Analyst** is an air-quality intelligence project aimed at helping students, researchers, and local communities understand air pollution patterns through **data-driven analysis and explainable AI**.
-
-The broader vision of this project is to evolve into a **decision-support platform** for air-quality awareness, trend interpretation, and health-risk understanding by combining historical data, real-time environmental information, and AI-based reasoning.
-
-The current implementation is an **MVP**, developed for **TechSprint (GDG on Campus × Hack2skill)**.  
-This MVP demonstrates the core idea using Google technologies while remaining realistic, interpretable, and reliable.
+A data-driven web application for **historical air quality analysis** and **real-time AQI monitoring**, powered by **Google Gemini AI** and **OpenWeatherMap**.  
+This project enables users to explore AQI trends, compare cities, understand health impacts, and view short-term air quality outlooks through an intuitive interface.
 
 ---
 
-## 🎯 Problem Statement
-Air quality information today is often:
-- Fragmented across multiple platforms  
-- Difficult for non-experts to interpret  
-- Inconsistent or unavailable for many Indian cities  
+## 🚀 Project Overview
 
-Many existing systems either show raw AQI numbers without explanation or provide opaque predictions that users cannot easily trust or understand.
+Air pollution is a critical environmental and public health challenge.  
+This project aims to:
 
----
+- Analyze **historical AQI datasets** to uncover patterns and trends
+- Provide **AI-powered insights** for interpretation and decision-making
+- Enable **real-time AQI lookup** for any city worldwide
+- Present **qualitative short-term AQI outlooks** (next 24–48 hours)
+- Bridge **data science + AI reasoning + environmental awareness**
 
-## 💡 Project Vision
-The **AQI Analyst** project aims to:
-- Make air-quality data **accessible and interpretable**
-- Combine historical trends with real-time conditions
-- Use AI to **explain**, not blindly predict
-- Support awareness, research, and informed decision-making
+The system is designed as a **research-oriented analytical tool**, not just a dashboard.
 
 ---
 
-## ✅ Current Implementation (MVP Features)
+## ✨ Key Features
 
-### 1️⃣ Historical AQI Analysis (CSV-Based)
-- Upload AQI datasets
-- Visualize city-wise AQI trends over time
-- Compare pollution levels across cities
-- Identify seasonal patterns and pollution spikes
+### 📊 AQI Analysis (Historical Data)
+- Upload AQI CSV datasets (`Date`, `City`, `AQI`)
+- Interactive AQI trend visualization
+- AI-powered insights using Google Gemini:
+  - 📈 Trend Analysis
+  - 🏙️ City-wise Comparison
+  - 🩺 Health Impact Assessment
+  - 🔮 Qualitative AQI Forecast (Improve / Worsen / Stable)
+- Insights are generated in **concise, research-grade bullet points**
+- Spinner-based feedback during AI processing for better UX
 
-### 2️⃣ AI-Powered Insights (Google Gemini)
-- Explains AQI trends in plain language
-- Provides qualitative city comparisons
-- Generates interpretive forecasts:
-  - **IMPROVE**
-  - **WORSEN**
-  - **STABLE**
-- Avoids black-box numeric predictions
+---
 
-### 3️⃣ Live Global AQI Lookup (OpenWeatherMap)
-- Works for cities worldwide
-- Reliable for Indian Tier-2 and Tier-3 cities (e.g., Vijayawada)
+### 🌍 Live AQI Lookup (Global)
+- Fetch **real-time air quality data** for any city worldwide
+- Powered by **OpenWeatherMap Air Pollution API**
 - Displays:
-  - Current Air Quality Index (OpenWeather scale)
-  - Pollutant components (PM2.5, PM10, NO₂, O₃, SO₂, CO)
-  - Short-term air-quality trend
-- AI explains health implications and general precautions
+  - Current AQI level
+  - AQI category (Good, Fair, Moderate, Poor, Very Poor)
+  - Pollutant components (PM2.5, PM10, CO, NO₂, O₃, SO₂, etc.)
+  - Qualitative AQI outlook for the **next 24 and 48 hours**
+- AI-generated explanation covering:
+  - Current air quality condition
+  - Short-term trend interpretation
+  - General health implications
+  - Precautionary advice
 
 ---
 
-## 🧠 Why Google Gemini?
-Google Gemini is used for **reasoning and explanation**, not for raw prediction.
+## 🧠 AI Integration
 
-This ensures:
-- Transparency  
-- Interpretability  
-- Ethical and academic correctness  
+This project uses **Google Gemini** for:
+- Interpreting AQI patterns
+- Explaining trends in a research-oriented tone
+- Providing health-related insights
+- Generating qualitative forecasts without numeric speculation
 
-Gemini analyzes summarized data and produces human-readable insights instead of opaque outputs.
-
----
-
-## 🌍 Why OpenWeatherMap?
-Station-based AQI APIs often lack consistent coverage for many Indian cities.
-
-OpenWeatherMap was chosen because it:
-- Uses latitude–longitude based geospatial data  
-- Provides global coverage  
-- Offers stable and consistent air-pollution data  
-- Works reliably for Indian Tier-2 and Tier-3 cities  
+> ⚠️ AI-generated insights are interpretive and intended for **academic and research purposes only**.
 
 ---
 
 ## 🛠️ Tech Stack
-- **Frontend:** Streamlit  
-- **Data Processing:** Pandas  
-- **AI Reasoning:** Google Gemini (google-genai SDK)  
-- **Live AQI Data:** OpenWeatherMap Air Pollution API  
-- **Environment Management:** Python dotenv  
+
+- **Frontend / UI**: Streamlit
+- **Data Processing**: Pandas
+- **AI Model**: Google Gemini (via `google.genai`)
+- **Live AQI Data**: OpenWeatherMap API
+- **Environment Management**: dotenv / Streamlit secrets
+- **Language**: Python
 
 ---
 
 ## 📂 Project Structure
+
+
 aqi-gemini/
 
 |
