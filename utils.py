@@ -100,14 +100,6 @@ def fetch_air_pollution(lat, lon):
 
 
 def fetch_live_aqi(city_name):
-    """
-    Returns:
-    - current AQI
-    - AQI category
-    - pollutant components
-    - Next 24h and following 24h outlook (TEXT)
-    """
-
     location = get_city_coordinates(city_name)
     if "error" in location:
         return {"error": "Failed to resolve city location."}
@@ -121,7 +113,6 @@ def fetch_live_aqi(city_name):
 
     current = pollution["current"]
     components = current.get("components", {})
-
     aqi_value = current.get("main", {}).get("aqi")
 
     aqi_category_map = {
@@ -133,10 +124,8 @@ def fetch_live_aqi(city_name):
     }
 
     category_now = aqi_category_map.get(aqi_value, "Unknown")
-
     forecast_list = pollution.get("forecast", [])
 
-    # Default values
     category_24h = category_now
     category_48h = category_now
 
@@ -150,7 +139,6 @@ def fetch_live_aqi(city_name):
             forecast_list[1]["main"]["aqi"], category_now
         )
 
-    # ✅ EXACT FORMAT YOU WANT
     forecast_text = (
         f"Next 24 Hours: {category_24h}\n"
         f"Following 24 Hours: {category_48h}"
@@ -163,6 +151,49 @@ def fetch_live_aqi(city_name):
         "forecast_text": forecast_text,
         "next_2_days_trend": forecast_text,
         "forecast": forecast_list
+    }
+
+
+# ===================== OPTION B: HEALTH ADVISORY (NEW) =====================
+
+def get_health_advisory(aqi_value):
+    """
+    Returns health advisory and alert flag based on AQI level.
+    """
+
+    if aqi_value == 1:
+        return {
+            "advisory": "Air quality is good. Ideal conditions for outdoor activities.",
+            "alert": False
+        }
+
+    if aqi_value == 2:
+        return {
+            "advisory": "Air quality is fair. Sensitive individuals should be cautious.",
+            "alert": False
+        }
+
+    if aqi_value == 3:
+        return {
+            "advisory": "Moderate air quality. People with respiratory issues should limit prolonged outdoor exertion.",
+            "alert": False
+        }
+
+    if aqi_value == 4:
+        return {
+            "advisory": "Poor air quality. Avoid outdoor activities and consider wearing a mask.",
+            "alert": True
+        }
+
+    if aqi_value == 5:
+        return {
+            "advisory": "Very poor air quality. Stay indoors and follow health advisories strictly.",
+            "alert": True
+        }
+
+    return {
+        "advisory": "Air quality data unavailable.",
+        "alert": False
     }
 
 
